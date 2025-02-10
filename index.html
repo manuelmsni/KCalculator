@@ -188,7 +188,7 @@
         <select id="langSelector" class="hidden"></select>
         <div id="search">
             <div>
-                <input type="text" id="searchInput" placeholder="Search ingredients..." autocomplete="off">
+                <input type="text" id="searchInput" autocomplete="off">
                 <ul id="autocompleteList"></ul>
             </div>
         </div>
@@ -233,6 +233,10 @@
         const contentDiv = document.getElementById('content');
     
         (async () => {
+
+            const translate = () => {
+                document.getElementById("searchInput").placeholder = `${translations.find(t => t.Code === 'searchBarText')[selectedLang.Code]}...`;
+            };
 
             const fetchMultipleResources = async (fetcher, resources) => {
                 const fetchPromises = resources.map(resource =>
@@ -350,10 +354,8 @@
 
             const generateContent = async () => {
                 await mapLang(selectedLang);
+                translate();
                 await loadIngredients(document.getElementById('content'));
-            };
-
-            const translate = (langPage) => {
             };
 
             const sugerenceLimit = 10;
