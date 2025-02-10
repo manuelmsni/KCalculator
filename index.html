@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://manuelmsni.github.io/JsTools/Fetcher.js"></script>
+    <title>Document</title>
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        a {
+            cursor: pointer;
+        }
+
+        header {
+            padding: .5rem;
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            flex-wrap: wrap;
+            background-color: #fff;
+            column-gap: .5rem;
+            row-gap: .5rem;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        #search {    
+            overflow: visible;
+            width: 500px;
+            max-width: 100%;
+            box-sizing: border-box;
+            height: 40px;
+        }
+
+        #search > div{
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #searchInput {
+            padding: 10px;
+            border-radius: 10px;
+            border: none;
+            height: 36px;
+            box-sizing: border-box;
+        }
+
+        #searchInput:focus {
+            outline: none;
+            border: none;
+            box-shadow: none;
+        }
+
+        #autocompleteList {
+            margin: 0;
+            max-height: 150px;
+            overflow: visible;
+            background-color: #fff;
+            z-index: 1000;
+            padding: 0;
+            border-radius: 10px;
+        }
+
+        #autocompleteList li:first-child {
+            border-top: 1px solid #ddd;
+        }
+
+        #autocompleteList li:last-child {
+            border-bottom-left-radius: 10px;
+            border-bottom-right-radius: 10px;
+        }
+
+        #autocompleteList li {
+            padding: 10px;
+            cursor: pointer;
+            list-style: none;
+        }
+
+        #autocompleteList li:hover {
+            background-color: #f0f0f0;
+        }
+
+        #langSelector {
+            height: 40px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+        }
+
+        #navigationTrigger, #closeMenu {
+            display: flex;
+            box-sizing: border-box;
+            height: 40px;
+            width: 40px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            cursor: pointer;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #closeMenu:hover, #navigationTrigger:hover {
+            background-color: #f0f0f0;
+        }
+
+        #navigationTrigger > a {
+            filter: contrast(0);
+            margin-bottom: 3px;
+        }
+
+        #closeMenu > a {
+            filter: contrast(0);
+            font-family: sans-serif;
+            font-weight: bold;
+            margin-bottom: -3px;
+        }
+
+        #navigation{
+            display: flex;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.350);
+            cursor: pointer;
+        }
+
+        #menu {
+            width: 300px;
+            max-width: calc(100% - 3rem);
+            background-color: #fff;
+            cursor: default;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+
+        #menuHeader {
+            display: flex;
+            flex-direction: row;
+            justify-content: flex-end;
+            padding: .5rem;
+        }
+
+        #menuContent li:not(:has(a)) {
+            cursor: pointer;
+        }
+
+        #content {
+            padding: 1rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            text-align: justify;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        .itemContainer{
+            border-radius: .5rem;
+            border: 1px solid #ddd;
+            padding-left: 1rem;
+            padding-right: 1rem;
+            background-color: #f0f0f0;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div id="navigationTrigger"><a>🏚️</a></div>
+        <select id="langSelector" class="hidden"></select>
+        <div id="search">
+            <div>
+                <input type="text" id="searchInput" placeholder="Search ingredients..." autocomplete="off">
+                <ul id="autocompleteList"></ul>
+            </div>
+        </div>
+    </header>
+
+    <nav id="navigation" class="hidden">
+        <div id="menu">
+            <div id="menuHeader">
+                <div id="closeMenu"><a>X</a></div>
+            </div>
+            <div id="menuContent">
+
+            </div>
+        </div>
+    </nav>
+
+    <div id="content"></div>
+
+    <script>
+
+        const fetcher = new Fetcher(true);
+
+        const frontendDatabase = '1UCt_Ju9mhcxSwNz4_UxqiHkNjAG9R3tDFgbaTrIWjEA';
+
+        var resources = null;
+        var data = null;
+        var langs = null;
+        var translations = null;
+        var selectedLang = null;
+        var thresholds = null;
+
+        // "GlucemicIndex", "KCal",
+        var propertyFilter = ["Code", "Name", "Labels", "GlucemicCharge", "Carbohydrates", "Sugar", "Fiber", "Proteins", "Fat", "Saturated", "Fe", "Na", "Ca", "K", "Mg", "B6", "B12", "C", "D"];
+
+        const langSelector = document.getElementById('langSelector');
+        const searchInput = document.getElementById('searchInput');
+        const autocompleteList = document.getElementById('autocompleteList');
+        const navigation = document.getElementById('navigation');
+        const navigationTrigger = document.getElementById('navigationTrigger');
+        const closeMenu = document.getElementById('closeMenu');
+        const menuContent = document.getElementById('menuContent');
+        const contentDiv = document.getElementById('content');
+    
+        (async () => {
+
+            const fetchMultipleResources = async (fetcher, resources) => {
+                const fetchPromises = resources.map(resource =>
+                    fetcher.fetchGoogleSheetsCSVAsJson(frontendDatabase, resource.gid).then(data => {
+                        resource.value = data;
+                    }).catch(error => {
+                        if (fetcher.debugMode) console.error(`Error fetching resource ${resource.gid}:`, error);
+                    })
+                );
+                await Promise.all(fetchPromises);
+                return resources;
+            };
+
+            const mapLang = async (lang) => {
+                if (lang && !lang.Loaded) {
+                    let translations = await fetcher.fetchGoogleSheetsCSVAsJson(frontendDatabase, lang.Page);
+                    translations.forEach((translation) => {
+                        let correspondingDataEntry = data.find(d => d.Code === translation.Code);
+                        if (correspondingDataEntry) {
+                            correspondingDataEntry.Labels = correspondingDataEntry.Labels || {};
+                            correspondingDataEntry.Name = correspondingDataEntry.Name || {};
+                            correspondingDataEntry.Labels[lang.Code] = translation.Labels ? translation.Labels.split(';') : [];
+                            correspondingDataEntry.Name[lang.Code] = translation.Name || "";
+                        }
+                    });
+                    lang.Loaded = true;
+                }
+            };
+
+            const getColor = (value, thresholds) => {
+                return thresholds.find(t => t.Min <= value && value <= t.Max).Value;
+            };
+
+            const hexToRgb = (hex) => {
+                hex = hex.replace('#', '');
+                const r = parseInt(hex.substring(0, 2), 16);
+                const g = parseInt(hex.substring(2, 4), 16);
+                const b = parseInt(hex.substring(4, 6), 16);
+                return { r, g, b };
+            };
+
+            const interpolateColor = (color1, color2, factor) => {
+                const r = Math.round(color1.r + (color2.r - color1.r) * factor);
+                const g = Math.round(color1.g + (color2.g - color1.g) * factor);
+                const b = Math.round(color1.b + (color2.b - color1.b) * factor);
+
+                return `rgb(${r},${g},${b})`;
+            };
+
+            const calculateColor = (value, thresholds) => {
+                const numericValue = parseFloat(value);
+                const minColor = { r: 0, g: 255, b: 0 };
+                const maxColor = { r: 255, g: 0, b: 0 };
+                let values = thresholds.GlucemicIndex.map(threshold => ({
+                    value: parseFloat(threshold.Max),
+                    color: hexToRgb(threshold.Value)
+                }));
+                if (values[0].value > 0) {
+                    values.unshift({ value: 0, color: minColor });
+                }
+                if (values[values.length - 1].value < 100) {
+                    values.push({ value: 100, color: maxColor });
+                }
+                let groups = [];
+                for (let i = 0; i < values.length - 1; i++) {
+                    groups.push({
+                        minValue: values[i].value,
+                        minColor: values[i].color,
+                        maxValue: values[i + 1].value,
+                        maxColor: values[i + 1].color
+                    });
+                }
+                let selectedGroup = groups.find(group =>
+                    numericValue >= group.minValue && numericValue < group.maxValue
+                ) || groups[groups.length - 1];
+                let factor = (numericValue - selectedGroup.minValue) /
+                            (selectedGroup.maxValue - selectedGroup.minValue);
+                factor = Math.max(0, Math.min(1, factor));
+                return interpolateColor(selectedGroup.minColor, selectedGroup.maxColor, factor);
+            };
+
+            const loadIngredients = (container, filter = '') => {
+                container.innerHTML = '';
+
+                if (data.length === 0) return;
+
+                var filteredData = null;
+                if (filter === '') {
+                    filteredData = data;
+                } else {
+                    filteredData = data.filter(ingredient => 
+                        ingredient.Name[selectedLang.Code].toLowerCase().includes(filter.toLowerCase())
+                    );
+                }
+
+                if (filteredData.length === 0) return;
+
+                const keys = Object.keys(data[0]).filter(key => !propertyFilter.includes(key));
+                const nameLabel = translations.find(t => t.Code === 'Name')[selectedLang.Code];
+                
+
+                filteredData.forEach(ingredient => {
+                    const div = document.createElement('div');
+                    div.classList.add('itemContainer');
+                    var glucemicIndexCorrection = ingredient.GlucemicIndex * (100 / 110); // 110 is the max value
+                    var color = calculateColor(glucemicIndexCorrection, thresholds);
+                    div.style.backgroundColor = color;
+                    const nameParagraph = document.createElement('p');
+                    nameParagraph.textContent = nameLabel + ": " + ingredient.Name[selectedLang.Code];
+                    div.appendChild(nameParagraph);
+                    keys.forEach(key => {
+                        const propertyParagraph = document.createElement('p');
+                        const propertyTranslation = translations.find(t => t.Code === key)[selectedLang.Code];
+                        propertyParagraph.textContent = propertyTranslation + ": " + ingredient[key];
+                        div.appendChild(propertyParagraph);
+                    });
+                    container.appendChild(div);
+                });
+            };
+
+            const generateContent = async () => {
+                await mapLang(selectedLang);
+                await loadIngredients(document.getElementById('content'));
+            };
+
+            const translate = (langPage) => {
+            };
+
+            const sugerenceLimit = 10;
+
+            const generateAutocompleteList = (query) => {
+                query = query.toLowerCase();
+                autocompleteList.innerHTML = '';
+
+                if (query) {
+                    const queryWords = query.split(' ');
+                    const matches = data
+                        .map(ingredient => {
+                            const ingredientName = ingredient.Name[selectedLang.Code].toLowerCase();
+                            const relevance = queryWords
+                                .every(word => ingredientName.includes(word));
+                            return {
+                                ingredient,
+                                relevance
+                            };
+                        })
+                        .filter(item => item.relevance)
+                        .sort((a, b) => a.relevance - b.relevance)
+                        .slice(0, sugerenceLimit);
+
+                    matches.forEach(({ ingredient }) => {
+                        const listItem = document.createElement('li');
+                        listItem.textContent = ingredient.Name[selectedLang.Code];
+                        listItem.onclick = async () => {
+                            autocompleteList.innerHTML = '';
+                            searchInput.value = ingredient.Name[selectedLang.Code];
+                            await loadIngredients(document.getElementById('content'), ingredient.Name[selectedLang.Code]);
+                        };
+                        autocompleteList.appendChild(listItem);
+                    });
+                }
+            };
+    
+            navigationTrigger.addEventListener('click', function() {
+                navigation.classList.toggle('hidden');
+            });
+
+            closeMenu.addEventListener('click', function() {
+                navigation.classList.toggle('hidden');
+            });
+
+            navigation.addEventListener('click', function(event) {
+                if (event.target === navigation) {
+                    navigation.classList.toggle('hidden');
+                }
+            });
+    
+            const ingredientList = document.createElement('ul');
+            document.body.appendChild(ingredientList);
+
+            resources = await fetcher.fetchGoogleSheetsCSVAsJson(frontendDatabase);
+
+            const resourcesBinding = [
+                { gid: resources[0].Data, value: null },
+                { gid: resources[0].Languages, value: null },
+                { gid: resources[0].Translations, value: null },
+                { gid: resources[0].Thresholds, value: null }
+            ]; 
+
+            if(resources){
+                await fetchMultipleResources(fetcher, resourcesBinding);
+                data = resourcesBinding[0].value;
+                langs = resourcesBinding[1].value;
+                translations = resourcesBinding[2].value;
+                thresholds = resourcesBinding[3].value.reduce(function(acc, item) {
+                    if (!acc[item.Variable]) {
+                        acc[item.Variable] = [];
+                    }
+                    acc[item.Variable].push(item);
+                    return acc;
+                }, {});
+            }
+
+            if (data && langs && translations) {
+
+                data.sort((a, b) => a.GlucemicIndex - b.GlucemicIndex);
+
+                selectedLang = langs[0];
+
+                await generateContent();
+
+                searchInput.addEventListener('input', (event) => {
+                    generateAutocompleteList(event.target.value);
+                });
+    
+                searchInput.addEventListener('focus', () => {
+                    generateAutocompleteList(searchInput.value);
+                });
+                
+                document.addEventListener('click', (event) => {
+                    if (!searchInput.contains(event.target) && !autocompleteList.contains(event.target)) {
+                        autocompleteList.innerHTML = '';
+                    }
+                });
+
+                if (langs.length > 0) {
+
+                    if(langs.length > 1){
+                        langSelector.classList.remove('hidden');
+                    }
+        
+                    langs.forEach(lang => {
+                        const option = document.createElement('option');
+                        option.id = lang.Code;
+                        option.textContent = lang.Language;
+                        option.value = lang.Page;
+                        langSelector.appendChild(option);
+                    });
+        
+                    langSelector.onchange = async (event) => {
+                        translate(event.target.value);
+                    };
+
+                }
+            }
+        })();
+
+    </script>
+</body>
+</html>
