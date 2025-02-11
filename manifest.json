@@ -2,7 +2,7 @@
     "name": "SaludGlucemica",
     "short_name": "SaludGlucemica",
     "description": "Aplicación para consultar datos de salud glucémica.",
-    "start_url": "/",
+    "start_url": "/KCalculator/",
     "display": "standalone",
     "background_color": "#ffffff",
     "theme_color": "#4CAF50",
