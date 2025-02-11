@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://manuelmsni.github.io/JsTools/Fetcher.js"></script>
-    <title>Document</title>
+    <title>SaludGlucemica</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="icon-32x32.png">
     <style>
         body {
             font-family: Arial, Helvetica, sans-serif;
@@ -188,7 +189,7 @@
         <select id="langSelector" class="hidden"></select>
         <div id="search">
             <div>
-                <input type="text" id="searchInput" autocomplete="off">
+                <input type="text" id="searchInput" placeholderTranslationCode="searchBarText" autocomplete="off">
                 <ul id="autocompleteList"></ul>
             </div>
         </div>
@@ -217,8 +218,10 @@
         var data = null;
         var langs = null;
         var translations = null;
-        var selectedLang = null;
         var thresholds = null;
+
+        var selectedLang = null;
+        var selectedCondition = null;
 
         // "GlucemicIndex", "KCal",
         var propertyFilter = ["Code", "Name", "Labels", "GlucemicCharge", "Carbohydrates", "Sugar", "Fiber", "Proteins", "Fat", "Saturated", "Fe", "Na", "Ca", "K", "Mg", "B6", "B12", "C", "D"];
@@ -234,8 +237,24 @@
     
         (async () => {
 
-            const translate = () => {
-                document.getElementById("searchInput").placeholder = `${translations.find(t => t.Code === 'searchBarText')[selectedLang.Code]}...`;
+            const translate = async () => {
+                Array.from(document.getElementsByClassName("translatable")).forEach(element => {
+                    const textTranslationCode = element.getAttribute('textTranslationCode');
+                    if (textTranslationCode) {
+                        const translation = translations.find(t => t.Code === textTranslationCode);
+                        if (translation) {
+                            element.textContent = translation[selectedLang.Code] || element.textContent;
+                        }
+                    }
+
+                    const placeholderTranslationCode = element.getAttribute('placeholderTranslationCode');
+                    if (placeholderTranslationCode) {
+                        const translation = translations.find(t => t.Code === placeholderTranslationCode);
+                        if (translation) {
+                            element.placeholder = translation[selectedLang.Code] || element.placeholder;
+                        }
+                    }
+                });
             };
 
             const fetchMultipleResources = async (fetcher, resources) => {
@@ -264,6 +283,14 @@
                     });
                     lang.Loaded = true;
                 }
+            };
+
+            const filterConditionThresholds = (condition) => {
+                return Object.fromEntries(
+                    Object.entries(thresholds)
+                        .filter(([_, value]) => Array.isArray(value))
+                        .map(([key, value]) => [key, value.filter(item => item.Condition === condition)])
+                );
             };
 
             const hexToRgb = (hex) => {
@@ -313,6 +340,28 @@
                 return interpolateColor(selectedGroup.minColor, selectedGroup.maxColor, factor, transparency);
             };
 
+            const buildValueParagraph = (key, label, value) => {
+                const nameParagraph = document.createElement('p');
+
+                const nameLabelSpan = document.createElement('span');
+                nameLabelSpan.textContent = label;
+                nameLabelSpan.style.fontWeight = 'bold';
+                nameLabelSpan.setAttribute('textTranslationCode', key);
+                nameLabelSpan.classList.add('translatable');
+                nameParagraph.prepend(nameLabelSpan);
+
+                const dotsSpan = document.createElement('span');
+                dotsSpan.textContent = ': ';
+                dotsSpan.style.fontWeight = 'bold';
+                nameParagraph.appendChild(dotsSpan);
+
+                const nameValueSpan = document.createElement('span');
+                nameValueSpan.textContent = value;
+                nameParagraph.appendChild(nameValueSpan);
+
+                return nameParagraph;
+            };
+
             const loadIngredients = (container, filter = '') => {
                 container.innerHTML = '';
 
@@ -331,22 +380,17 @@
 
                 const keys = Object.keys(data[0]).filter(key => !propertyFilter.includes(key));
                 const nameLabel = translations.find(t => t.Code === 'Name')[selectedLang.Code];
-                
-
+                const selectedConditionThresholds = filterConditionThresholds("Cancer");
                 filteredData.forEach(ingredient => {
                     const div = document.createElement('div');
                     div.classList.add('itemContainer');
-                    var glucemicIndexCorrection = ingredient.GlucemicIndex * (100 / 110); // 110 is the max value
-                    var color = calculateColor(glucemicIndexCorrection, thresholds, 55 / 100);
+                    var color = calculateColor(ingredient.GlucemicIndex, thresholds, 55 / 100);
                     div.style.backgroundColor = color;
-                    const nameParagraph = document.createElement('p');
-                    nameParagraph.textContent = nameLabel + ": " + ingredient.Name[selectedLang.Code];
-                    div.appendChild(nameParagraph);
+                    
+                    div.appendChild(buildValueParagraph('Name', nameLabel, ingredient.Name[selectedLang.Code]));
+
                     keys.forEach(key => {
-                        const propertyParagraph = document.createElement('p');
-                        const propertyTranslation = translations.find(t => t.Code === key)[selectedLang.Code];
-                        propertyParagraph.textContent = propertyTranslation + ": " + ingredient[key];
-                        div.appendChild(propertyParagraph);
+                        div.appendChild(buildValueParagraph(key, translations.find(t => t.Code === key)[selectedLang.Code], ingredient[key]));
                     });
                     container.appendChild(div);
                 });
