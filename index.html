@@ -6,7 +6,7 @@
     <script src="https://manuelmsni.github.io/JsTools/Fetcher.js"></script>
     <title>SaludGlucemica</title>
     <link rel="icon" type="image/png" sizes="32x32" href="icon-32x32.png">
-    <link rel="manifest" href="/manifest.json" />
+    <link rel="manifest" href="manifest.json" />
     <style>
         body {
             font-family: Arial, Helvetica, sans-serif;
@@ -210,6 +210,16 @@
     <div id="content"></div>
 
     <script>
+
+        if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/service-worker.js').then((registration) => {
+            console.log('Service Worker registrado con éxito:', registration);
+            }).catch((error) => {
+            console.log('Error al registrar el Service Worker:', error);
+            });
+        });
+        }
 
         const fetcher = new Fetcher(true);
 
