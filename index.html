@@ -13,6 +13,7 @@
             font-family: Arial, Helvetica, sans-serif;
             margin: 0;
             padding: 0;
+            background-color: #282828;
         }
 
         a {
@@ -20,12 +21,12 @@
         }
 
         header {
-            padding: .5rem;
+            padding: .7rem;
             display: flex;
             flex-direction: row;
             justify-content: center;
             flex-wrap: wrap;
-            background-color: #fff;
+            background-color: #3c3c3c;
             column-gap: .5rem;
             row-gap: .5rem;
         }
@@ -50,6 +51,7 @@
 
         #search > div{
             border: 2px solid #ddd;
+            background: #ffffff;
             border-radius: 10px;
             display: flex;
             flex-direction: column;
@@ -109,6 +111,7 @@
             box-sizing: border-box;
             height: 40px;
             width: 40px;
+            background-color: #ffffff;
             border: 2px solid #ddd;
             border-radius: 10px;
             cursor: pointer;
@@ -183,6 +186,14 @@
             background-color: #f0f0f0;
             margin-bottom: 1rem;
         }
+
+        .valueSpan{
+            padding: .2rem;
+            padding-left: .5rem;
+            padding-right: .5rem;
+            border-radius: .4rem;
+            border: 1px solid #dddddd;
+        }
     </style>
 </head>
 <body>
@@ -237,8 +248,7 @@
         var selectedLang = null;
         var selectedCondition = null;
 
-        // "GlucemicIndex", "KCal",
-        var propertyFilter = ["Code", "Name", "Labels", "GlucemicCharge", "Carbohydrates", "Sugar", "Fiber", "Proteins", "Fat", "Saturated", "Fe", "Na", "Ca", "K", "Mg", "B6", "B12", "C", "D"];
+        var propertyFilter = ["Code", "Name", "KCal", "Labels", "GlucemicCharge", "Carbohydrates", "Sugar", "Fiber", "Proteins", "Fat", "Saturated", "Fe", "Na", "Ca", "K", "Mg", "B6", "B12", "C", "D"];
 
         const langSelector = document.getElementById('langSelector');
         const searchInput = document.getElementById('searchInput');
@@ -321,40 +331,62 @@
                 const b = Math.round(color1.b + (color2.b - color1.b) * factor);
                 return `rgba(${r},${g},${b},${transparency})`;
             };
-
-            const calculateColor = (value, thresholds, transparency = 1) => {
+            
+            const calculateThresholdGroup = (value, thresholds) => {
+                console.log(thresholds);
                 const numericValue = parseFloat(value);
                 const minColor = { r: 0, g: 255, b: 0 };
                 const maxColor = { r: 255, g: 0, b: 0 };
+
                 let values = thresholds.GlucemicIndex.map(threshold => ({
                     value: parseFloat(threshold.Max),
-                    color: hexToRgb(threshold.Value)
+                    color: hexToRgb(threshold.Value),
+                    description: threshold.Description
                 }));
+
                 if (values[0].value > 0) {
-                    values.unshift({ value: 0, color: minColor });
+                    values.unshift({ value: 0, color: minColor, description: "Very Low" });
                 }
                 if (values[values.length - 1].value < 100) {
-                    values.push({ value: 100, color: maxColor });
+                    values.push({ value: 100, color: maxColor, description: "Very High" });
                 }
+
                 let groups = [];
                 for (let i = 0; i < values.length - 1; i++) {
                     groups.push({
                         minValue: values[i].value,
                         minColor: values[i].color,
                         maxValue: values[i + 1].value,
-                        maxColor: values[i + 1].color
+                        maxColor: values[i + 1].color,
+                        description: values[i + 1].description // Aquí se corrige la asignación
                     });
                 }
-                let selectedGroup = groups.find(group =>
+
+                let correspondingGroup = groups.find(group =>
                     numericValue >= group.minValue && numericValue < group.maxValue
                 ) || groups[groups.length - 1];
-                let factor = (numericValue - selectedGroup.minValue) /
-                            (selectedGroup.maxValue - selectedGroup.minValue);
+
+                let factor = (numericValue - correspondingGroup.minValue) /
+                    (correspondingGroup.maxValue - correspondingGroup.minValue);
                 factor = Math.max(0, Math.min(1, factor));
-                return interpolateColor(selectedGroup.minColor, selectedGroup.maxColor, factor, transparency);
+
+                return {
+                    correspondingGroup: correspondingGroup,
+                    factor: factor,
+                    description: correspondingGroup.description
+                };
             };
 
-            const buildValueParagraph = (key, label, value) => {
+            const calculateColor = (group, transparency = 1) => {
+                return interpolateColor(
+                    group.correspondingGroup.minColor,
+                    group.correspondingGroup.maxColor,
+                    group.factor,
+                    transparency
+                );
+            };
+
+            const buildValueParagraph = (key, label, value, color, risk) => {
                 const nameParagraph = document.createElement('p');
 
                 const nameLabelSpan = document.createElement('span');
@@ -371,9 +403,45 @@
 
                 const nameValueSpan = document.createElement('span');
                 nameValueSpan.textContent = value;
+                if (color){
+                    nameValueSpan.style.backgroundColor = color;
+                    nameValueSpan.classList.add('valueSpan');
+                }
                 nameParagraph.appendChild(nameValueSpan);
 
+                if (risk){
+
+                    const dashSpan = document.createElement('span');
+                    dashSpan.textContent = ' - ';
+                    dashSpan.style.fontWeight = 'bold';
+                    nameParagraph.appendChild(dashSpan);
+
+                    const riskSpan = document.createElement('span');
+                    riskSpan.textContent = translations.find(t => t.Code === risk)[selectedLang.Code];
+                    nameLabelSpan.setAttribute('textTranslationCode', risk);
+                    if (color){
+                        riskSpan.style.backgroundColor = color;
+                        riskSpan.classList.add('valueSpan');
+                    }
+                    nameParagraph.appendChild(riskSpan);
+                }
+
                 return nameParagraph;
+            };
+
+            const buildIngredientDiv = (ingredient, nameLabel, keys, thresholds) => {
+                const div = document.createElement('div');
+                div.classList.add('itemContainer');
+                const group = calculateThresholdGroup(ingredient.GlucemicIndex, thresholds);
+                var color = calculateColor(group, 55 / 100);
+                
+                div.appendChild(buildValueParagraph('Name',  nameLabel, ingredient.Name[selectedLang.Code]));
+
+                keys.forEach(key => {
+                    div.appendChild(buildValueParagraph(key, translations.find(t => t.Code === key)[selectedLang.Code], ingredient[key], color, group.description));
+                });
+
+                return div;
             };
 
             const loadIngredients = (container, filter = '') => {
@@ -391,22 +459,16 @@
                 }
 
                 if (filteredData.length === 0) return;
-
-                const keys = Object.keys(data[0]).filter(key => !propertyFilter.includes(key));
-                const nameLabel = translations.find(t => t.Code === 'Name')[selectedLang.Code];
                 const selectedConditionThresholds = filterConditionThresholds("Cancer");
-                filteredData.forEach(ingredient => {
-                    const div = document.createElement('div');
-                    div.classList.add('itemContainer');
-                    var color = calculateColor(ingredient.GlucemicIndex, thresholds, 55 / 100);
-                    div.style.backgroundColor = color;
-                    
-                    div.appendChild(buildValueParagraph('Name', nameLabel, ingredient.Name[selectedLang.Code]));
-
-                    keys.forEach(key => {
-                        div.appendChild(buildValueParagraph(key, translations.find(t => t.Code === key)[selectedLang.Code], ingredient[key]));
-                    });
-                    container.appendChild(div);
+                filteredData.forEach(ingredient => { 
+                    container.appendChild(
+                        buildIngredientDiv(
+                            ingredient,
+                            translations.find(t => t.Code === 'Name')[selectedLang.Code],
+                            Object.keys(data[0]).filter(key => !propertyFilter.includes(key)),
+                            selectedConditionThresholds
+                        )
+                    );
                 });
             };
 
