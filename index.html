@@ -202,6 +202,18 @@
             background-color: #3c3c3c;
         }
 
+        #selectedCounter {
+            font-family: serif;
+            text-align: center;
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            width: 20px;
+            height: 20px;
+            background-color: #696969;
+            border-radius: 50%;
+        }
+
         .selected {
             background-color: #7e939c;
         }
@@ -233,7 +245,7 @@
 
     <div id="content"></div>
 
-    <div id="floating"><a>➗</a></div>
+    <div id="floating"><a id="selectedCounter" class="hidden"></a><a>➗</a></div>
 
     <script>
 
@@ -272,6 +284,7 @@
         const closeMenu = document.getElementById('closeMenu');
         const menuContent = document.getElementById('menuContent');
         const contentDiv = document.getElementById('content');
+        const selectedCounter = document.getElementById('selectedCounter');
     
         (async () => {
 
@@ -462,7 +475,14 @@
                     } else {
                         div.classList.remove('selected');
                     }
-                    selectedIngredients = console.log(data.filter(ingredient => ingredient.selected));
+                    selectedIngredients = data.filter(ingredient => ingredient.selected);
+                    var selectedCount = selectedIngredients.length;
+                    if (selectedCount > 0) {
+                        document.getElementById('selectedCounter').textContent = selectedIngredients.length;
+                        selectedCounter.classList.remove('hidden');
+                    } else {
+                        selectedCounter.classList.add('hidden');
+                    }
                 };
 
                 return div;
