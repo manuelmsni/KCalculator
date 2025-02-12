@@ -106,7 +106,7 @@
             border-radius: 10px;
         }
 
-        #navigationTrigger, #closeMenu {
+        #navigationTrigger, #closeMenu, #floating {
             display: flex;
             box-sizing: border-box;
             height: 40px;
@@ -194,6 +194,18 @@
             border-radius: .4rem;
             border: 1px solid #dddddd;
         }
+
+        #floating {
+            position: fixed;
+            bottom: 1rem;
+            left: 1rem;
+            background-color: #3c3c3c;
+        }
+
+        .selected {
+            background-color: #7e939c;
+        }
+
     </style>
 </head>
 <body>
@@ -220,6 +232,8 @@
     </nav>
 
     <div id="content"></div>
+
+    <div id="floating"><a>➗</a></div>
 
     <script>
 
@@ -440,6 +454,16 @@
                 keys.forEach(key => {
                     div.appendChild(buildValueParagraph(key, translations.find(t => t.Code === key)[selectedLang.Code], ingredient[key], color, group.description));
                 });
+
+                div.onclick = () => {
+                    ingredient.selected = !ingredient.selected;
+                    if (ingredient.selected) {
+                        div.classList.add('selected');
+                    } else {
+                        div.classList.remove('selected');
+                    }
+                    selectedIngredients = console.log(data.filter(ingredient => ingredient.selected));
+                };
 
                 return div;
             };
