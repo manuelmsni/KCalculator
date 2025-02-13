@@ -128,7 +128,7 @@
             margin-bottom: 3px;
         }
 
-        #closeMenu > a {
+        #closeMenu > a, #closeCalculator > a {
             filter: contrast(0);
             font-family: sans-serif;
             font-weight: bold;
@@ -223,6 +223,15 @@
             background-color: #7e939c;
         }
 
+        #calculator {
+            position: absolute;
+            z-index: 999;
+            top: 1rem;
+            left: 1em;
+            height: calc(100% - 2rem);
+            width: calc(100% - 2rem);
+        }
+
     </style>
 </head>
 <body>
@@ -252,18 +261,27 @@
 
     <div id="floating"><a id="selectedCounter" class="hidden"></a><a>➗</a></div>
 
+    <div id="calculator" class="hidden">
+        <div id="calculatorHeader">
+            <div id="closeCalculator"><a>X</a></div>
+        </div>
+        <div id="calculatorContent">
+
+        </div>
+    </div>
+
     <script>
 
         const version = '0.0.0.1';
 
         if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/service-worker.js').then((registration) => {
-            console.log('Service Worker registrado con éxito:', registration);
-            }).catch((error) => {
-            console.log('Error al registrar el Service Worker:', error);
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js').then((registration) => {
+                    console.log('Service Worker registrado con éxito:', registration);
+                }).catch((error) => {
+                    console.log('Error al registrar el Service Worker:', error);
+                });
             });
-        });
         }
 
         const fetcher = new Fetcher(true);
@@ -290,6 +308,9 @@
         const menuContent = document.getElementById('menuContent');
         const contentDiv = document.getElementById('content');
         const selectedCounter = document.getElementById('selectedCounter');
+        const openCalculator = document.getElementById('selectedCounter');
+        const calculator = document.getgetElementById('calculator');
+        const closeCalculator = document.getgetElementById('closeCalculator');
     
         (async () => {
 
@@ -568,6 +589,10 @@
 
             closeMenu.addEventListener('click', function() {
                 navigation.classList.toggle('hidden');
+            });
+
+            closeCalculator.addEventListener('click', function() {
+                calculator.classList.toggle('hidden');
             });
 
             navigation.addEventListener('click', function(event) {
