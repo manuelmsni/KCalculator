@@ -106,7 +106,7 @@
             border-radius: 10px;
         }
 
-        #navigationTrigger, #closeMenu, #floating {
+        #navigationTrigger, #closeMenu, #floating, #closeCalculator {
             display: flex;
             box-sizing: border-box;
             height: 40px;
@@ -119,7 +119,7 @@
             justify-content: center;
         }
 
-        #closeMenu:hover, #navigationTrigger:hover {
+        #closeMenu:hover, #navigationTrigger:hover, #closeCalculator:hover {
             background-color: #f0f0f0;
         }
 
@@ -224,12 +224,20 @@
         }
 
         #calculator {
+            background-color: #545959;
             position: absolute;
             z-index: 999;
-            top: 1rem;
-            left: 1em;
-            height: calc(100% - 2rem);
-            width: calc(100% - 2rem);
+            top: .7rem;
+            left: .7em;
+            height: calc(100% - 1.4rem);
+            width: calc(100% - 1.4rem);
+            border-radius: 1rem;
+        }
+
+        #calculatorHeader {
+            display: flex;
+            flex-direction: row-reverse;
+            padding: .7rem;
         }
 
     </style>
@@ -497,22 +505,35 @@
                 div.onclick = () => {
                     ingredient.selected = !ingredient.selected;
                     if (ingredient.selected) {
-                        div.classList.add('selected');
+                        addIngredient(ingredient, div);
                     } else {
-                        div.classList.remove('selected');
-                    }
-                    selectedIngredients = data.filter(ingredient => ingredient.selected);
-                    var selectedCount = selectedIngredients.length;
-                    if (selectedCount > 0) {
-                        document.getElementById('selectedCounter').textContent = selectedIngredients.length;
-                        selectedCounter.classList.remove('hidden');
-                    } else {
-                        selectedCounter.classList.add('hidden');
+                        removeIngredient(ingredient, div);
                     }
                 };
-
+                
                 return div;
             };
+
+            const addIngredient = (ingredient, div) => {
+                div.classList.add('selected');
+                updateSelected();
+            }
+
+            const removeIngredient = (ingredient, div) => {
+                div.classList.remove('selected');
+                updateSelected();
+            }
+
+            const updateSelected = () => {
+                selectedIngredients = data.filter(ingredient => ingredient.selected);
+                var selectedCount = selectedIngredients.length;
+                if (selectedCount > 0) {
+                    selectedCounter.textContent = selectedIngredients.length;
+                    selectedCounter.classList.remove('hidden');
+                } else {
+                    selectedCounter.classList.add('hidden');
+                }
+            }
 
             const loadIngredients = (container, filter = '') => {
                 container.innerHTML = '';
@@ -589,6 +610,10 @@
 
             closeMenu.addEventListener('click', function() {
                 navigation.classList.toggle('hidden');
+            });
+
+            openCalculator.addEventListener('click', function() {
+                calculator.classList.toggle('hidden');
             });
 
             closeCalculator.addEventListener('click', function() {
