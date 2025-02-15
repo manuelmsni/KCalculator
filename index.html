@@ -106,7 +106,7 @@
             border-radius: 10px;
         }
 
-        #navigationTrigger, #closeMenu, #floating, #closeCalculator {
+        #navigationTrigger, #closeMenu, #floating, #closeCalculator, .delete {
             display: flex;
             box-sizing: border-box;
             height: 40px;
@@ -119,7 +119,7 @@
             justify-content: center;
         }
 
-        #closeMenu:hover, #navigationTrigger:hover, #closeCalculator:hover {
+        #closeMenu:hover, #navigationTrigger:hover, #closeCalculator:hover, .delete:hover {
             background-color: #f0f0f0;
         }
 
@@ -128,7 +128,7 @@
             margin-bottom: 3px;
         }
 
-        #closeMenu > a, #closeCalculator > a {
+        #closeMenu > a, #closeCalculator > a, .delete > a {
             filter: contrast(0);
             font-family: sans-serif;
             font-weight: bold;
@@ -178,7 +178,7 @@
             text-align: center;
         }
 
-        .itemContainer{
+        .itemContainer, .calculatorItem{
             border-radius: .5rem;
             border: 1px solid #ddd;
             padding-left: 1rem;
@@ -240,6 +240,10 @@
             padding: .7rem;
         }
 
+        #calculatorContent {
+            padding: 1rem;
+        }
+
     </style>
 </head>
 <body>
@@ -272,6 +276,9 @@
     <div id="calculator" class="hidden">
         <div id="calculatorHeader">
             <div id="closeCalculator"><a>X</a></div>
+            <div id="calculatorInfo">
+                <p id="calculatorValue"></p>
+            </div>
         </div>
         <div id="calculatorContent">
 
@@ -319,6 +326,8 @@
         const openCalculator = document.getElementById('floating');
         const calculator = document.getElementById('calculator');
         const closeCalculator = document.getElementById('closeCalculator');
+        const calculatorContent = document.getElementById('calculatorContent');
+        const calculatorValue = document.getElementById('calculatorValue');
     
         (async () => {
 
@@ -517,11 +526,62 @@
             const addIngredient = (ingredient, div) => {
                 div.classList.add('selected');
                 updateSelected();
+                var calculatorItem = buildCalculatorIngredientDiv(ingredient, div);
+                if(calculatorItem){
+                    calculatorContent.appendChild(calculatorItem);
+                }
             }
 
             const removeIngredient = (ingredient, div) => {
+                ingredient.selected = false;
                 div.classList.remove('selected');
+                const existingDiv = document.getElementById(`calculator-ingredient-${ingredient.Code}`);
+                if (existingDiv) {
+                    existingDiv.remove();
+                }
                 updateSelected();
+            }
+
+            const buildCalculatorIngredientDiv = (ingredient, div) => {
+                var calculatorItem = null;
+                if(!document.getElementById(`calculator-ingredient-${ingredient.Code}`)){
+                    calculatorItem = document.createElement('div');
+                    calculatorItem.classList.add('calculatorItem');
+
+                    var deleteButton = document.createElement('div');
+                    deleteButton.classList.add('delete');
+                    var deleteButtonLabel = document.createElement('a');
+                    deleteButtonLabel.textContent = 'X';
+                    deleteButton.appendChild(deleteButtonLabel);
+                    calculatorItem.appendChild(deleteButton);
+
+                    calculatorItem.id = `calculator-ingredient-${ingredient.Code}`;
+                    calculatorItem.appendChild(buildValueParagraph('Name',  translations.find(t => t.Code === 'Name')[selectedLang.Code], ingredient.Name[selectedLang.Code]));
+
+                    var weightInput = document.createElement('input');
+                    weightInput.type = 'number';
+                    weightInput.placeholder = 'Enter weight';
+                    weightInput.value = ingredient.Weight || ''; 
+                    weightInput.addEventListener('input', () => {
+                        if (isNaN(weightInput.value) || weightInput.value <= 0) {
+                            console.log("Por favor, ingresa un peso válido.");
+                        } else {
+                            ingredient.Weight = weightInput.value;
+                            calculateValues();
+                        }
+                    });
+                    calculatorItem.appendChild(weightInput);
+
+                    deleteButton.onclick = () => {
+                        removeIngredient(ingredient, div);
+                    }
+                }
+                return calculatorItem;
+            }
+
+            const calculateValues = () => {
+                var selectedIngredients = data.filter(ingredient => ingredient.selected);
+                
             }
 
             const updateSelected = () => {
