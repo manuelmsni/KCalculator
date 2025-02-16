@@ -596,7 +596,7 @@
             const calculateValues = () => {
                 var selectedIngredients = data.filter(ingredient => ingredient.selected);
                 var totalGrams = selectedIngredients.reduce((sum, ingredient) => {
-                    return sum + (ingredient.Weight || 0);
+                    return sum + (Number(ingredient.Weight) || 0);
                 }, 0);
                 calculatorValue.textContent = `${totalGrams}`;
             }
