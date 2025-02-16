@@ -593,10 +593,19 @@
                 return calculatorItem;
             }
 
+            const calculateGlucemicCharge = (glucemicIndex, weight, percentageOfCarbohydrates) => {
+                let carbohydrates = (percentageOfCarbohydrates / 100) * weight;
+                let glycemicCharge = (glucemicIndex * carbohydrates) / 100;
+                return glycemicCharge;
+            }
+               
             const calculateValues = () => {
                 var selectedIngredients = data.filter(ingredient => ingredient.selected);
                 var totalGrams = selectedIngredients.reduce((sum, ingredient) => {
-                    return sum + (Number(ingredient.Weight) || 0);
+                    return sum + calculateGlucemicCharge(
+                        Number(ingredient.GlucemicIndex),
+                        Number(ingredient.Weight) || 0,
+                        Number(ingredient.Carbphydrates)) || 0;
                 }, 0);
                 calculatorValue.textContent = `${totalGrams}`;
             }
