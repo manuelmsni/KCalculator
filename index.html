@@ -198,7 +198,7 @@
         #floating {
             position: fixed;
             bottom: 1rem;
-            left: 1rem;
+            right: 1rem;
             background-color: #3c3c3c;
         }
 
@@ -237,7 +237,8 @@
         #calculatorHeader {
             display: flex;
             flex-direction: row-reverse;
-            padding: .7rem;
+            padding: 1rem;
+            justify-content: space-between;
         }
 
         #calculatorContent {
@@ -255,6 +256,26 @@
             border: none;
             height: 36px;
             box-sizing: border-box;
+        }
+
+        #calculatorValue {
+            margin-left: 0.5rem;
+        }
+
+        #calculatorGlucemicChargeOutput {
+            padding: 1rem;
+            border-radius: .5rem;
+            border: 1px solid #ddd;
+            padding-left: 1rem;
+            padding-right: 1rem;
+            background-color: #414141;
+            margin-bottom: 1rem;
+            color: white;
+        }
+
+        #calculatorGlucemicChargeOutput > .valueSpan {
+            color: black;
+            line-height: 2rem;
         }
 
     </style>
@@ -290,7 +311,7 @@
         <div id="calculatorHeader">
             <div id="closeCalculator"><a>X</a></div>
             <div id="calculatorInfo">
-                <p><span id="calculatorValueLabel"></span><span id="calculatorValue"></span></p>
+                <p id="calculatorGlucemicChargeOutput" class="hidden"></p>
             </div>
         </div>
         <div id="calculatorContent">
@@ -340,8 +361,7 @@
         const calculator = document.getElementById('calculator');
         const closeCalculator = document.getElementById('closeCalculator');
         const calculatorContent = document.getElementById('calculatorContent');
-        const calculatorValue = document.getElementById('calculatorValue');
-        const calculatorValueLabel = document.getElementById('calculatorValueLabel');
+        const calculatorGlucemicChargeOutput = document.getElementById('calculatorGlucemicChargeOutput');
         
         (async () => {
 
@@ -416,13 +436,13 @@
                 return `rgba(${r},${g},${b},${transparency})`;
             };
             
-            const calculateThresholdGroup = (value, thresholds) => {
+            const calculateThresholdGroup = (value, thresholds, Variable = 'GlucemicIndex') => {
                 console.log(thresholds);
                 const numericValue = parseFloat(value);
                 const minColor = { r: 0, g: 255, b: 0 };
                 const maxColor = { r: 255, g: 0, b: 0 };
 
-                let values = thresholds.GlucemicIndex.map(threshold => ({
+                let values = thresholds[Variable].map(threshold => ({
                     value: parseFloat(threshold.Max),
                     color: hexToRgb(threshold.Value),
                     description: threshold.Description
@@ -544,6 +564,7 @@
                 if(calculatorItem){
                     calculatorContent.appendChild(calculatorItem);
                 }
+                calculateValues();
             }
 
             const removeIngredient = (ingredient, div) => {
@@ -554,6 +575,7 @@
                     existingDiv.remove();
                 }
                 updateSelected();
+                calculateValues ();
             }
 
             const buildCalculatorIngredientDiv = (ingredient, div) => {
@@ -574,15 +596,19 @@
 
                     var weightInput = document.createElement('input');
                     weightInput.type = 'number';
-                    weightInput.placeholder = 'Enter weight';
+                    weightInput.placeholder = translations.find(t => t.Code === 'weighInput')[selectedLang.Code];
                     weightInput.value = ingredient.Weight || ''; 
                     weightInput.addEventListener('input', () => {
-                        if (isNaN(weightInput.value) || weightInput.value <= 0) {
+                        if (weightInput.value === '') {
+                            ingredient.Weight = 0;
+                        } else if (isNaN(weightInput.value) || weightInput.value <= 0) {
                             console.log("Por favor, ingresa un peso válido.");
+                            ingredient.Weight = 0;
                         } else {
                             ingredient.Weight = weightInput.value;
-                            calculateValues();
+                            
                         }
+                        calculateValues();
                     });
                     calculatorItem.appendChild(weightInput);
 
@@ -594,20 +620,62 @@
             }
 
             const calculateGlucemicCharge = (glucemicIndex, weight, percentageOfCarbohydrates) => {
-                let carbohydrates = (percentageOfCarbohydrates / 100) * weight;
+                let carbohydrates = percentageOfCarbohydrates * weight;
                 let glycemicCharge = (glucemicIndex * carbohydrates) / 100;
                 return glycemicCharge;
             }
                
             const calculateValues = () => {
+                var totalGrams = 0;
                 var selectedIngredients = data.filter(ingredient => ingredient.selected);
-                var totalGrams = selectedIngredients.reduce((sum, ingredient) => {
-                    return sum + calculateGlucemicCharge(
-                        Number(ingredient.GlucemicIndex),
-                        Number(ingredient.Weight) || 0,
-                        Number(ingredient.Carbphydrates)) || 0;
-                }, 0);
-                calculatorValue.textContent = `${totalGrams}`;
+
+                calculatorGlucemicChargeOutput.innerHTML = '';
+
+                if(selectedIngredients.length > 0){
+                    var totalGrams = selectedIngredients.reduce((sum, ingredient) => {
+                        return sum + calculateGlucemicCharge(
+                            Number(ingredient.GlucemicIndex),
+                            Number(ingredient.Weight) || 0,
+                            Number(ingredient.Carbohydrates)) || 0;
+                    }, 0);
+
+                    var calculatorValueLabel = document.createElement('span');
+                    calculatorValueLabel.id = 'calculatorValueLabel';
+                    calculatorValueLabel.textContent = translations.find(t => t.Code === 'calculatorValueLabel')[selectedLang.Code];
+                    calculatorGlucemicChargeOutput.appendChild(calculatorValueLabel);
+
+                    const selectedConditionThresholds = filterConditionThresholds("Cancer");
+
+                    var thresholdGroup = calculateThresholdGroup(totalGrams, selectedConditionThresholds, 'GlucemicCharge');
+                    var color = calculateColor(thresholdGroup);
+
+                    var dotsSpan = document.createElement('span');
+                    dotsSpan.textContent = ': ';
+                    dotsSpan.style.fontWeight = 'bold';
+                    calculatorGlucemicChargeOutput.appendChild(dotsSpan);
+
+                    var calculatorValue = document.createElement('span');
+                    calculatorValue.id = 'calculatorValue';
+                    calculatorValue.textContent = `${totalGrams.toFixed(2)}`;
+                    calculatorValue.style.backgroundColor = color;
+                    calculatorValue.classList.add('valueSpan');
+                    calculatorGlucemicChargeOutput.appendChild(calculatorValue);
+
+                    var separator = document.createElement('span');
+                    separator.textContent = ' - ';
+                    calculatorGlucemicChargeOutput.appendChild(separator);
+
+                    var calculatorValueDescription = document.createElement('span');
+                    calculatorValueDescription.id = 'calculatorValueDescription';
+                    calculatorValueDescription.textContent = thresholdGroup.description;
+                    calculatorValueDescription.style.backgroundColor = color;
+                    calculatorValueDescription.classList.add('valueSpan');
+                    calculatorGlucemicChargeOutput.appendChild(calculatorValueDescription);
+
+                    calculatorGlucemicChargeOutput.classList.remove('hidden');
+                } else {
+                    calculatorGlucemicChargeOutput.classList.add('hidden');
+                }
             }
 
             const updateSelected = () => {
@@ -653,7 +721,7 @@
                 await mapLang(selectedLang);
                 translate();
                 await loadIngredients(document.getElementById('content'));
-                calculatorValueLabel.textContent = translations.find(t => t.Code === 'calculatorValueLabel')[selectedLang.Code];
+                
             };
 
             const sugerenceLimit = 10;

@@ -5,7 +5,7 @@
     "start_url": "/KCalculator/",
     "display": "standalone",
     "background_color": "#ffffff",
-    "theme_color": "#4CAF50",
+    "theme_color": "#696969",
     "icons": [
       {
         "src": "./icon-512x512.png",
