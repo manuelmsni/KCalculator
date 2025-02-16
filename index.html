@@ -667,7 +667,7 @@
 
                     var calculatorValueDescription = document.createElement('span');
                     calculatorValueDescription.id = 'calculatorValueDescription';
-                    calculatorValueDescription.textContent = thresholdGroup.description;
+                    calculatorValueDescription.textContent = translations.find(t => t.Code === thresholdGroup.description)[selectedLang.Code];
                     calculatorValueDescription.style.backgroundColor = color;
                     calculatorValueDescription.classList.add('valueSpan');
                     calculatorGlucemicChargeOutput.appendChild(calculatorValueDescription);
