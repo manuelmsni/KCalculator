@@ -243,6 +243,19 @@
         #calculatorContent {
             padding: 1rem;
         }
+        
+        .calculatorItem {
+            padding-top: 1rem;
+            padding-bottom: 1rem;
+        }
+
+        .calculatorItem input {
+            padding: 10px;
+            border-radius: 10px;
+            border: none;
+            height: 36px;
+            box-sizing: border-box;
+        }
 
     </style>
 </head>
@@ -277,7 +290,7 @@
         <div id="calculatorHeader">
             <div id="closeCalculator"><a>X</a></div>
             <div id="calculatorInfo">
-                <p id="calculatorValue"></p>
+                <p><span id="calculatorValueLabel"></span><span id="calculatorValue"></span></p>
             </div>
         </div>
         <div id="calculatorContent">
@@ -328,7 +341,8 @@
         const closeCalculator = document.getElementById('closeCalculator');
         const calculatorContent = document.getElementById('calculatorContent');
         const calculatorValue = document.getElementById('calculatorValue');
-    
+        const calculatorValueLabel = document.getElementById('calculatorValueLabel');
+        
         (async () => {
 
             const translate = async () => {
@@ -581,7 +595,10 @@
 
             const calculateValues = () => {
                 var selectedIngredients = data.filter(ingredient => ingredient.selected);
-                
+                var totalGrams = selectedIngredients.reduce((sum, ingredient) => {
+                    return sum + (ingredient.Weight || 0);
+                }, 0);
+                calculatorValue.textContent = `${totalGrams}`;
             }
 
             const updateSelected = () => {
@@ -627,6 +644,7 @@
                 await mapLang(selectedLang);
                 translate();
                 await loadIngredients(document.getElementById('content'));
+                calculatorValueLabel.textContent = translations.find(t => t.Code === 'calculatorValueLabel')[selectedLang.Code];
             };
 
             const sugerenceLimit = 10;
